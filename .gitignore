@@ -9,3 +9,4 @@ profiles/
 _build/
 slides_files/
 supporting-files/
+.vscode/
