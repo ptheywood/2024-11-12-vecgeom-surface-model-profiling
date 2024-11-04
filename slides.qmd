@@ -1,0 +1,83 @@
+---
+title: "VecGeom Surface Model Profiling"
+author: 
+  - "Peter Heywood, Research Software Engineer"
+institute: 
+  - "The University of Sheffield"
+date: "2024-11-12"
+logo: ./img/UOSLogo_Primary_Violet_RGB.svg
+footer: "VecGeom Surface Model Profiling - [SWIFT-HEP #8 Joint with ExaTEPP](https://indico.cern.ch/event/1466097/)"
+
+format:
+  revealjs:
+    theme: theme/tuos.scss
+    embed-resources: true  # only enable when publish-ready for perf reasons
+    template-partials: 
+      - title-slide.html
+    # show-notes: separate-page
+    slide-number: c
+    width: 1050
+    height: 700
+    margin: 0.1
+    min-scale: 0.2
+    max-scale: 2.0
+    auto-stretch: false
+    fontsize: 32px
+    navigation-mode: linear
+    controls: true
+    mouse-wheel: true
+
+# title slide background
+title-slide-attributes:
+  data-background-color: "#9ADBE8" # $tuos-powder-blue
+  # data-background-color: "#D7F1F6" # $tuos-powder-blue-40
+
+---
+
+# Context {.divider .teal}
+
+## VecGeom `surface_model`
+
+@todo
+
+## `testRaytracing`
+
+@todo
+
+## `CMake Configuration`
+
+@todo
+
+## Geometries
+
+@todo
+
+## Hardware
+
+@todo
+
+# Benchmarking {.divider .flamingo}
+
+## @todo
+
+@todo
+
+# Profiling {.divider .teal}
+
+## @todo
+
+@todo
+
+# @todo {.divider .coral}
+
+## @todo
+
+@todo
+
+# Thank you {.divider .flamingo}
+
+# Additional Slides {.divider .coral visibility="uncounted" data-hide-slide-number='true'}
+
+## @todo
+
+@todo

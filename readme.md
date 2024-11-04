@@ -1,6 +1,8 @@
 # 2024-11-12 VecGeom Surface Model Profiling
 
-Slides for talk on 2024-11-11 as part of [SWIFT-HEP #8 Joint with ExaTEPP](https://indico.cern.ch/event/1466097/).
+Slides for talk on 2024-11-12 as part of [SWIFT-HEP #8 Joint with ExaTEPP](https://indico.cern.ch/event/1466097/).
+
+[🔗 Hosted slides via GitHub Actions](https://ptheywood.uk/2024-11-12-vecgeom-surface-model-profiling)
 
 ## Dependencies
 
@@ -39,8 +41,6 @@ quarto preview slides.qmd
 ## Hosted via gh-pages
 
 GitHub actions based publication via `.github/workflows/publish.yml`
-
-Hosted at https://ptheywood.uk/2024-11-12-vecgeom-surface-model-profiling
 
 Initial publication set up required:
 
