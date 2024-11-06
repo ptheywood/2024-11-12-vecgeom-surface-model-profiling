@@ -81,3 +81,51 @@ title-slide-attributes:
 ## @todo
 
 @todo
+
+<!-- 
+# Templates {.divider .flamingo visibility="uncounted" data-hide-slide-number='true'}
+
+
+::: {.plug}
+
+Sample plug 
+
+[https://github.com/ptheywood](https://github.com/ptheywood)
+
+:::
+
+
+## Screnshot slide {.smalltitle}
+
+![](img/image.png){fig-alt="alt text" width="100%" height="100%"}
+
+## columns 
+
+
+:::: {.columns}
+
+::: {.column width="50%"}
+
++ column
++ one
+
+```{.bash}
+#! /usr/bin/env bash
+echo "regular"
+```
+
+:::
+
+::: {.column width="50%"}
+
++ column
++ two
+
+```{.bash .bigger}
+#! /usr/bin/env bash
+echo "bigger"
+```
+
+:::
+
+:::: -->
