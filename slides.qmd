@@ -1,12 +1,12 @@
 ---
-title: "VecGeom Surface Model Profiling"
+title: "VecGeom `surface_model` profiling"
 author: 
   - "Peter Heywood, Research Software Engineer"
 institute: 
   - "The University of Sheffield"
 date: "2024-11-12"
 logo: ./img/UOSLogo_Primary_Violet_RGB.svg
-footer: "VecGeom Surface Model Profiling - [SWIFT-HEP #8 Joint with ExaTEPP](https://indico.cern.ch/event/1466097/)"
+footer: "VecGeom `surface_model` profiling - [SWIFT-HEP #8 Joint with ExaTEPP](https://indico.cern.ch/event/1466097/)"
 
 format:
   revealjs:
@@ -34,7 +34,9 @@ title-slide-attributes:
 
 ---
 
-# Context {.divider .teal}
+# Intro/Context {.divider .teal}
+
+<!-- Only 20 mins. -->
 
 ## VecGeom `surface_model`
 
@@ -44,15 +46,7 @@ title-slide-attributes:
 
 @todo
 
-## `CMake Configuration`
-
-@todo
-
-## Geometries
-
-@todo
-
-## Hardware
+## NVTX, `oncpu`
 
 @todo
 
@@ -64,13 +58,17 @@ Annotated testRaytracing timeline showing the relevant bits?
 
 Show reduced version used for profiling.
 
-# Benchmarking {.divider .flamingo}
+## `CMake Configuration`
 
-## LHcb Update
+@todo
 
-## CMS2026
+## Hardware
 
-## HGCal
+@todo
+
+## Geometries + Arguments used
+
+@todo
 
 # Profiling {.divider .teal}
 
@@ -99,6 +97,15 @@ Better register usage, but still not enough to actually help
 Reduced data movement, increased compute units
 
 
+# Benchmarking {.divider .flamingo}
+
+## TrackML
+
+## LHcb Update
+
+## CMS2026
+
+## HGCal
 
 @todo
 

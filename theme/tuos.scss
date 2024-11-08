@@ -169,6 +169,14 @@ $dark-bg-code-color: $tuos-powder-blue;
     }
 
 
+
+    .call-to-action {
+        text-align: center;
+        font-size: 3em;
+        color: $tuos-flamingo;
+        margin: 0.5em auto;
+    }
+
     // Title slide additional formatting 
     #title-slide #title-logo-container {
         width: 8em;
@@ -177,13 +185,6 @@ $dark-bg-code-color: $tuos-powder-blue;
         svg {
 
         }
-    }
-
-    .call-to-action {
-        text-align: center;
-        font-size: 3em;
-        color: $tuos-flamingo;
-        margin: 0.5em auto;
     }
 
     #title-slide {
@@ -215,12 +216,20 @@ $dark-bg-code-color: $tuos-powder-blue;
             font-size: $presentation-h4-font-size;
             margin-left: 0px;
         }
+        h1 code {
+            font-size: 80%;
+            color: $tuos-deep-violet-90;
+        }
     }
 
     .slide h2 {
         color: $tuos-deep-violet;
         background: $tuos-powder-blue;
         padding: 0.1em 0.2em;
+    }
+    .slide h2 code{
+        font-size: 80%;
+        color: $tuos-deep-violet-90;
     }
 
     .slide.headerless h2 {
@@ -276,6 +285,10 @@ $dark-bg-code-color: $tuos-powder-blue;
     .footer a {
         color: $tuos-midnight-black-90;
     }
+    .footer code {
+        font-size: 90%;
+        color: $tuos-midnight-black-60;
+    }
 
     .bg-darker {
         background: $tuos-midnight-black-10;
@@ -316,10 +329,16 @@ $dark-bg-code-color: $tuos-powder-blue;
     a {
         color: $tuos-midnight-black-5;
     }
+    code {
+        color: $tuos-midnight-black-5;
+    }
     color: $tuos-midnight-black-10;
 }
 .reveal.has-light-background .footer {
     a {
+        color: $tuos-midnight-black-100;
+    }
+    code {
         color: $tuos-midnight-black-100;
     }
     color: $tuos-midnight-black-90;
