@@ -168,7 +168,12 @@ $dark-bg-code-color: $tuos-powder-blue;
         margin-left: auto;
     }
 
-
+    table.table-striped > tbody > tr.odd {
+        background: $tuos-midnight-black-10;
+    }
+    table.table-full-width {
+        width: 100%;
+    }
 
     .call-to-action {
         text-align: center;
@@ -227,8 +232,8 @@ $dark-bg-code-color: $tuos-powder-blue;
         background: $tuos-powder-blue;
         padding: 0.1em 0.2em;
     }
-    .slide h2 code{
-        font-size: 80%;
+    .slide h2 code {
+        font-size: 90%;
         color: $tuos-deep-violet-90;
     }
 
@@ -316,6 +321,14 @@ $dark-bg-code-color: $tuos-powder-blue;
     code span.diff {
         color: $tuos-coral;
     }
+
+    // This would need to be done with diff colours for diff places (headers, title slide et
+    // code {
+    //     background-color: $tuos-powder-blue-20;
+    //     border: 1px solid $tuos-powder-blue-20;
+    //     border-radius: .25rem;
+    //     padding: .1rem .25rem;
+    // }
 
     .slide-logo {
         margin-bottom: 8px;

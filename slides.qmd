@@ -40,39 +40,95 @@ title-slide-attributes:
 
 ## VecGeom `surface_model`
 
++ https://gitlab.cern.ch/VecGeom/VecGeom
++ `surface_model` 
+  + https://gitlab.cern.ch/VecGeom/VecGeom/-/tree/surface_model?ref_type=heads
+
 @todo
 
 ## `testRaytracing`
 
-@todo
++ @todo Explain the test
++ @todo List some options, incl surface only
++ My (local) additions:
+  + [NVTX](https://nvidia.github.io/NVTX/) ranges for profile annotation
+  + `-oncpu 0` to disable cpu runs to to simplify profiling
 
-## NVTX, `oncpu`
+```bash
+testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0 \
+    -accept_zeros 1 -validate_results 1 -nrays 524228 -use_TB_gun 0   \
+    -only_surf 0 -test_bvh 1 -bvh_single_step 1 -bvh_split_step 1     \
+    -oncpu 1
+```
 
-@todo
+## `testRaytracing` timeline (`nsys`) {.smalltitle}
 
-## Timeline
+![](img/image.png){fig-alt="alt text" width="100%" height="100%"}
 
-Annotated testRaytracing timeline showing the relevant bits?
+<!-- @todo Annotated testRaytracing timeline showing the relevant bits? -->
 
-## Reduced Timeline
+```bash
+testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0     \
+    -accept_zeros 1 -validate_results 1 -nrays 524228 -use_TB_gun 0       \
+    -only_surf 0 -test_bvh 1 -bvh_single_step 1 -bvh_split_step 1 -oncpu 1
+```
 
-Show reduced version used for profiling.
+## `testRaytracing` timeline (`nsys`) {.smalltitle}
 
-## `CMake Configuration`
+![](img/image.png){fig-alt="alt text" width="100%" height="100%"}
 
-@todo
+<!-- @todo simplified version -->
 
-## Hardware
+```bash
+testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
+    -accept_zeros 1 -validate_results 0 -nrays 524228  -use_TB_gun 0       \
+    -only_surf 1 -test_bvh 1 -bvh_single_step 1 -bvh_split_step 1 -oncpu 0
+```
 
-@todo
+## Hardware 
 
-## Geometries + Arguments used
+::: {.center layout="[[-1], [1], [-1]]"}
 
-@todo
+| GPU       | CC | CPU                  | Cluster                             | Driver       |
+|:----------|----|:---------------------|:------------------------------------|:-------------|
+| V100 SXM2 | 70 | Intel Xeon Gold 6138 | [TUoS Bessemer][bessemer-gpu-specs] | `550.127.05` |
+| A100 SXM4 | 80 | AMD EPYC 7413        | [TUoS Stanage][stanage-gpu-specs]   | `550.127.05` |
+| H100 PCIe | 90 | AMD EPYC 7413        | [TUoS Stanage][stanage-gpu-specs]   | `550.127.05` |
+| GH200     | 90 | Nvidia Grace         | [N8CIR Bede][bede-gpu-specs]        | `560.35.03`  |
+
+: {.striped .table-full-width}
+
+:::
+
+[bessemer-gpu-specs]: https://docs.hpc.shef.ac.uk/en/latest/bessemer/cluster_specs.html#gpu-node-specifications
+[stanage-gpu-specs]: https://docs.hpc.shef.ac.uk/en/latest/stanage/cluster_specs.html#gpu-nodes
+[bede-gpu-specs]: https://bede-documentation.readthedocs.io/en/latest/hardware/index.html
+
+## Geometries
+
+::: {.center layout="[[-1], [1], [-1]]"}
+
+| Geometry                                                                 | Touchables |
+|:-------------------------------------------------------------------------|-----------:|
+| [`trackML.gdml`][trackML.gdml]                                           |    `18790` |
+| [`TBHGCal181Oct_fixdup.gdml`][TBHGCal181Oct_fixdup.gdml]                 |    `61802` |
+| [`cms2026D110DD4hep_fix.gdml`][cms2026D110DD4hep_fix.gdml]               | `13133900` |
+| [`LHCb_Upgrade_onlyECALandHCAL.gdml`][LHCb_Upgrade_onlyECALandHCAL.gdml] | `18429884` |
+
+: {.striped .table-full-width}
+
+:::
+
+[trackML.gdml]: https://gitlab.cern.ch/VecGeom/VecGeom/-/blob/master/test/gdml/gdmls/trackML.gdml?ref_type=heads
+[TBHGCal181Oct_fixdup.gdml]: https://cern-my.sharepoint.com/:u:/g/personal/severin_diederichs_cern_ch/EWFFpWCW4GpOhJgQfBaZTVkBjsjHke93QO7Em3TrK_GkFg
+[cms2026D110DD4hep_fix.gdml]: https://cern-my.sharepoint.com/:u:/g/personal/severin_diederichs_cern_ch/EfTefx_Me71Gs37_h-nuaTQB_8lqNsCMSz9kNmQOpEl2sA
+[LHCb_Upgrade_onlyECALandHCAL.gdml]: https://cern-my.sharepoint.com/:u:/g/personal/severin_diederichs_cern_ch/EWdDg95YWNNOuznQ9DnrfMUBmQrT9Akp2ixUPBuhGIdQww
 
 # Profiling {.divider .teal}
 
-## interesting Kernel
+## `PropagateRaysSurf`
+
+## `PropagateRaysSurfBVH`
 
 ## Register Pressure is the main problem
 
@@ -80,24 +136,37 @@ Show reduced version used for profiling.
 
 ## Register limit
 
-## Split kernels
+## `PropagateRaysSurfBVHSingle`
 
-## FP32
+## `ComputeNextStepAndNextSurfaces` + `LocateSurf`
 
-## Downsides
+## Mixed Precision Mode
 
-Experimental / WIP.
+`testRaytracing.h`
 
-Assertions etc when for Tbhgcal with non-trivial ray counts
+```c++
+using Real_t = float;
+```
 
-## Upsides
++ Experimental
++ Assertions triggered by many geometries
++ @todo - apparent hanging?
++ Unintentionally created a 1.3TB log file...
 
-Better register usage, but still not enough to actually help
+## Impact of Mixed Precision
 
-Reduced data movement, increased compute units
++ Less data to read, move and store
++ More FP32 units
++ Reduces Register pressure
+  + @todo - number.
 
++ @todo - change in runtime not significant for the base kernel
 
-# Benchmarking {.divider .flamingo}
+# Benchmarking {.divider .teal}
+
+## Per Model or Per kernel?
+
+@todo decide
 
 ## TrackML
 
@@ -109,19 +178,20 @@ Reduced data movement, increased compute units
 
 @todo
 
-# @todo {.divider .coral}
-
-## @todo
-
-@todo
-
 # Thank you {.divider .flamingo}
 
 # Additional Slides {.divider .coral visibility="uncounted" data-hide-slide-number='true'}
 
-## @todo
+## CMake Configuration
 
-@todo
+```bash
+cmake -S . -B build \ 
+      -DCMAKE_BUILD_TYPE=Release \
+      -DCMAKE_CUDA_ARCHITECTURES="70;80;90" \
+      -DVECGEOM_ENABLE_CUDA=ON -DVECGEOM_GDML=ON \
+      -DBACKEND=Scalar -DVECGEOM_USE_NAVTUPLE=ON \
+      -DVECGEOM_BVH_SINGLE=ON -DVECGEOM_BUILTIN_VECCORE=ON
+```
 
 <!-- 
 # Templates {.divider .flamingo visibility="uncounted" data-hide-slide-number='true'}
