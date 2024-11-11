@@ -43,9 +43,9 @@ title-slide-attributes:
 > VecGeom is a geometry modeller library with hit-detection features as needed by particle detector simulation at the LHC and beyond
 
 + [gitlab.cern.ch/VecGeom/VecGeom](https://gitlab.cern.ch/VecGeom/VecGeom)
-+ CPU + GP
-+ Solid modeling is not ideal for GPU
-+ Surface modeling approach for GPUs
++ CPU + GPU
++ Solid modelling / representation is not ideal for GPU
++ Developers are adding a Surface modelling / representation
   + [`surface_model` branch](https://gitlab.cern.ch/VecGeom/VecGeom/-/tree/surface_model) 
     + Similarities with [Orange](https://celeritas-project.github.io/celeritas/user/implementation/orange.html)/[Celeritas](https://github.com/celeritas-project/celeritas)
 
@@ -56,7 +56,7 @@ title-slide-attributes:
   + Solid and Surface representation
   + Validation (optional)
   + Without/with BVH
-  + BVH with multiple kernel launches & split kernels
+  + GPU Surface BVH with multiple kernel launches & split kernels
 
 
 
@@ -158,15 +158,24 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 + If the kernel requires more than 255 registers per thread, registers will spill to *local memory*
 + *local memory* is a (terribly named) region of *global memory* (with L1 caching of stores) - i.e. it is outside of the SM so latency is bad.
 
-## `PropagateRaysSurfBVHSingle`
+## `PropagateRaysSurfBVHSingle` 
 
-+ Rather than using a single kernel launch for the full ray propagation phase, split into multiple launches
-+ Less registers per thread may be required
++ Split the single kernel launch into a loop of 2 kernels:
+  + `PropagateRaysSurfBVHSingle` - traverse a single step
+  + `filterAliveRays` - compact the alive/inside rays for the next iteration
++ Reduces register pressure
 
++ @todo - timeline screen shot
++ @todo - compare for a single model? 
++ @todo - Only able to get partial data so far
++ @todo - show register use,  runtime.
 
-## `ComputeNextStepAndNextSurfaces` + `LocateSurf` 
+## `ComputeNextStepAndNextSurfaces` + `RelocateToNextVolumes` 
 
-**(or `RelocateToNextVolumes` and I didn't profile it...) @todo**
++ Splits  `PropagateRaysSurfBVHSingle` into `ComputeStepAndNextSurfaces` & `RelocateToNextVolumes`
++ @todo - timeline screenshot + comparison for the same geometry
++ @todo - show register usage + total time.
++ @todo - benchmark plot? 
 
 ## Mixed Precision Mode
 
@@ -337,6 +346,10 @@ cmake -S . -B build \
 
 
 
+
+## Long Tail
+
+- Slide showing the long tail?
 
 
 
