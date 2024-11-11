@@ -42,27 +42,27 @@ title-slide-attributes:
 
 > VecGeom is a geometry modeller library with hit-detection features as needed by particle detector simulation at the LHC and beyond
 
-+ [gitlab.cern.ch/VecGeom/VecGeom](https://gitlab.cern.ch/VecGeom/VecGeom)
-+ CPU + GPU
-+ Solid modelling / representation is not ideal for GPU
-+ Developers are adding a Surface modelling / representation
-  + [`surface_model` branch](https://gitlab.cern.ch/VecGeom/VecGeom/-/tree/surface_model) 
-    + Similarities with [Orange](https://celeritas-project.github.io/celeritas/user/implementation/orange.html)/[Celeritas](https://github.com/celeritas-project/celeritas)
+- [gitlab.cern.ch/VecGeom/VecGeom](https://gitlab.cern.ch/VecGeom/VecGeom)
+- CPU + GPU
+- Solid modelling / representation is not ideal for GPU
+- Developers are adding a Surface modelling / representation
+  - [`surface_model` branch](https://gitlab.cern.ch/VecGeom/VecGeom/-/tree/surface_model) 
+    - Similarities with [Orange](https://celeritas-project.github.io/celeritas/user/implementation/orange.html)/[Celeritas](https://github.com/celeritas-project/celeritas)
 
 ## `testRaytracing`
 
-+ `test/surfaces/testRaytracing.{h/cpp/cu}`
-+ Loads Geometry, generates random rays, tests on CPU and GPU.
-  + Solid and Surface representation
-  + Validation (optional)
-  + Without/with BVH
-  + GPU Surface BVH with multiple kernel launches & split kernels
+- `test/surfaces/testRaytracing.{h/cpp/cu}`
+- Loads Geometry, generates random rays, tests on CPU and GPU.
+  - Solid and Surface representation
+  - Validation (optional)
+  - Without/with BVH
+  - GPU Surface BVH with multiple kernel launches & split kernels
 
 
 
-+ Profiling tweaks:
-  + [NVTX](https://nvidia.github.io/NVTX/) ranges for profile annotation
-  + `-oncpu 0` to disable cpu runs to to speed up profiling
+- Profiling tweaks:
+  - [NVTX](https://nvidia.github.io/NVTX/) ranges for profile annotation
+  - `-oncpu 0` to disable cpu runs to to speed up profiling
 
 ```{.bash .bigger}
 testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0 \
@@ -136,46 +136,46 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 
 ## Streaming Multiprocessor, Residency, Occupancy, Registers file
 
-+ Nvidia GPUs contain many (GH100 has `144`) Streaming Multiprocessors (SMs). 
-+ @todo nv SM diagram? https://resources.nvidia.com/en-us-tensor-core/gtc22-whitepaper-hopper
-+ Each SM has a fixed number of 32 bit registers per SM (64K 32-bit registers for Hopper)
-+ Each thread has a upper limit of 255 registers / thread
-+ The required number of register per thread limits the number of threads which can become resident within an SM
+- Nvidia GPUs contain many (GH100 has `144`) Streaming Multiprocessors (SMs). 
+- @todo nv SM diagram? https://resources.nvidia.com/en-us-tensor-core/gtc22-whitepaper-hopper
+- Each SM has a fixed number of 32 bit registers per SM (64K 32-bit registers for Hopper)
+- Each thread has a upper limit of 255 registers / thread
+- The required number of register per thread limits the number of threads which can become resident within an SM
 
-+ **Occupancy** Ratio of active warps on an SM to the maximum it could support
-+ Increasing occupancy does not guarantee improved performance
-+ But it can enable the *warp scheduler* to context switch to other threads within the block, *hiding latency* 
+- **Occupancy** Ratio of active warps on an SM to the maximum it could support
+- Increasing occupancy does not guarantee improved performance
+- But it can enable the *warp scheduler* to context switch to other threads within the block, *hiding latency* 
 
-+ *resident threads* have been loaded into an SM
-+ *active threads of a warp* are participating in the current instruction
-+ *disabled threads of a warp* are not participating in the current instruction
-+ achieved occupancy will be lower than theoretical occupancy, especially when the schedulers cannot balance the work. 
-+ *eligable warps* are ready to isseu their next instruction (instruction has been fetched, execution unit(s) for instruction area ready, no unmet dependencies)
-+ *stalled warps* are not ready.
-+ Ideally want atleas as many eligable warps as schdulers per SM at any one point.
-+ 2 warps per SM is not enough... 
+- *resident threads* have been loaded into an SM
+- *active threads of a warp* are participating in the current instruction
+- *disabled threads of a warp* are not participating in the current instruction
+- achieved occupancy will be lower than theoretical occupancy, especially when the schedulers cannot balance the work. 
+- *eligable warps* are ready to isseu their next instruction (instruction has been fetched, execution unit(s) for instruction area ready, no unmet dependencies)
+- *stalled warps* are not ready.
+- Ideally want atleas as many eligable warps as schdulers per SM at any one point.
+- 2 warps per SM is not enough... 
 <!-- https://docs.nvidia.com/gameworks/content/developertools/desktop/analysis/report/cudaexperiments/kernellevel/issueefficiency.htm -->
-+ If the kernel requires more than 255 registers per thread, registers will spill to *local memory*
-+ *local memory* is a (terribly named) region of *global memory* (with L1 caching of stores) - i.e. it is outside of the SM so latency is bad.
+- If the kernel requires more than 255 registers per thread, registers will spill to *local memory*
+- *local memory* is a (terribly named) region of *global memory* (with L1 caching of stores) - i.e. it is outside of the SM so latency is bad.
 
 ## `PropagateRaysSurfBVHSingle` 
 
-+ Split the single kernel launch into a loop of 2 kernels:
-  + `PropagateRaysSurfBVHSingle` - traverse a single step
-  + `filterAliveRays` - compact the alive/inside rays for the next iteration
-+ Reduces register pressure
+- Split the single kernel launch into a loop of 2 kernels:
+  - `PropagateRaysSurfBVHSingle` - traverse a single step
+  - `filterAliveRays` - compact the alive/inside rays for the next iteration
+- Reduces register pressure
 
-+ @todo - timeline screen shot
-+ @todo - compare for a single model? 
-+ @todo - Only able to get partial data so far
-+ @todo - show register use,  runtime.
+- @todo - timeline screen shot
+- @todo - compare for a single model? 
+- @todo - Only able to get partial data so far
+- @todo - show register use,  runtime.
 
 ## `ComputeNextStepAndNextSurfaces` + `RelocateToNextVolumes` 
 
-+ Splits  `PropagateRaysSurfBVHSingle` into `ComputeStepAndNextSurfaces` & `RelocateToNextVolumes`
-+ @todo - timeline screenshot + comparison for the same geometry
-+ @todo - show register usage + total time.
-+ @todo - benchmark plot? 
+- Splits  `PropagateRaysSurfBVHSingle` into `ComputeStepAndNextSurfaces` & `RelocateToNextVolumes`
+- @todo - timeline screenshot + comparison for the same geometry
+- @todo - show register usage + total time.
+- @todo - benchmark plot? 
 
 ## Mixed Precision Mode
 
@@ -186,10 +186,10 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 ::: {.column .smaller width="60%"}
 
 <!-- + Reduce register pressure by using single precision in for some but not all real values -->
-+ Single precision for some but not all `Real`
-+ Reduces register pressure
-+ More FP32 units
-+ Less memory
+- Single precision for some but not all `Real`
+- Reduces register pressure
+- More FP32 units
+- Less memory
 
 :::
 
@@ -209,12 +209,12 @@ using Real_t = float;
 
 ::: {.column .smaller width="60%"}
 
-+ *"not stable on most geometries"*
-  + Assertions triggered by many geometries
-  + Launch failures
-  + `bvh_single_step` and `bvh_split_step` run indefinitely
-    + For some geometries, and on some GPUs?
-  + Unintentionally created a 1.3TB log file...
+- *"not stable on most geometries"*
+  - Assertions triggered by many geometries
+  - Launch failures
+  - `bvh_single_step` and `bvh_split_step` run indefinitely
+    - For some geometries, and on some GPUs?
+  - Unintentionally created a 1.3TB log file...
 
 :::
 
@@ -233,12 +233,12 @@ $ du -sh slurm-842405.out
 
 ## Impact of Mixed Precision
 
-+ Less data to read, move and store
-+ More FP32 units
-+ Reduces Register pressure
-  + @todo - number.
+- Less data to read, move and store
+- More FP32 units
+- Reduces Register pressure
+  - @todo - number.
 
-+ @todo - change in runtime not significant for the base kernel
+- @todo - change in runtime not significant for the base kernel
 
 # Benchmarking {.divider .teal}
 
@@ -304,20 +304,20 @@ cmake -S . -B build \
 
 ## Limit registers per thread
 
-+ Use `--ptxas-options=-v` to get register use and spill count at compile time
-  + Or it is reported by the profiler(s).
-+ Globally via `--maxrregcount N`
-+ Per kernel:
-  + `__maxnreg__` for CUDA >= 12.4
-  + `__launch_bounds__` for older CUDAs, but less intuitive
+- Use `--ptxas-options=-v` to get register use and spill count at compile time
+  - Or it is reported by the profiler(s).
+- Globally via `--maxrregcount N`
+- Per kernel:
+  - `__maxnreg__` for CUDA >= 12.4
+  - `__launch_bounds__` for older CUDAs, but less intuitive
 
-+ I.e. `cmake .. -DCMAKE_CUDA_FLAGS="--maxrregcount 128 -Xptxas -v" ... `
+- I.e. `cmake .. -DCMAKE_CUDA_FLAGS="--maxrregcount 128 -Xptxas -v" ... `
 
-+ Increases occupancy
-+ Increases (forces) register spilling
-+ Often hurts more than it helps
+- Increases occupancy
+- Increases (forces) register spilling
+- Often hurts more than it helps
 
-+ @todo -figures and dat if possible.
+- @todo -figures and dat if possible.
 
 
 ## Increase block size. 
@@ -377,8 +377,8 @@ Sample plug
 
 ::: {.column width="50%"}
 
-+ column
-+ one
+- column
+- one
 
 ```{.bash}
 #! /usr/bin/env bash
@@ -389,8 +389,8 @@ echo "regular"
 
 ::: {.column width="50%"}
 
-+ column
-+ two
+- column
+- two
 
 ```{.bash .bigger}
 #! /usr/bin/env bash
