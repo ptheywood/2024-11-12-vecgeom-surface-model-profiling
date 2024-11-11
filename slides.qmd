@@ -43,27 +43,35 @@ title-slide-attributes:
 > VecGeom is a geometry modeller library with hit-detection features as needed by particle detector simulation at the LHC and beyond
 
 - [gitlab.cern.ch/VecGeom/VecGeom](https://gitlab.cern.ch/VecGeom/VecGeom)
-- CPU + GPU
-- Solid modelling / representation is not ideal for GPU
+- CPU & GPU implementations 
+- Solid modelling / representation
+  - Not ideal for GPU
 - Developers are adding a Surface modelling / representation
   - [`surface_model` branch](https://gitlab.cern.ch/VecGeom/VecGeom/-/tree/surface_model) 
     - Similarities with [Orange](https://celeritas-project.github.io/celeritas/user/implementation/orange.html)/[Celeritas](https://github.com/celeritas-project/celeritas)
 
 ## `testRaytracing`
 
+::: {.smaller}
+
 - `test/surfaces/testRaytracing.{h/cpp/cu}`
-- Loads Geometry, generates random rays, tests on CPU and GPU.
+- Loads geometry, generates random rays, tests on CPU and GPU.
   - Solid and Surface representation
-  - Validation (optional)
+  - Validation
   - Without/with BVH
   - GPU Surface BVH with multiple kernel launches & split kernels
 
+:::
+
+::: {.smaller}
 
 - Profiling tweaks:
   - [NVTX](https://nvidia.github.io/NVTX/) ranges for profile annotation
   - `-oncpu 0` to disable cpu runs to to speed up profiling
 
-```{.bash .bigger}
+:::
+
+```{.bash .slightly-bigger}
 testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0 \
     -accept_zeros 1 -validate_results 1 -nrays 524228 -use_TB_gun 0   \
     -only_surf 0 -test_bvh 1 -bvh_single_step 1 -bvh_split_step 1     \
@@ -72,27 +80,33 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0 \
 
 ## `testRaytracing` timeline (`nsys`) {.smalltitle}
 
-![](img/image.png){fig-alt="alt text" width="100%" height="100%"}
+:::{fig-cap-location=top}
 
-<!-- @todo Annotated testRaytracing timeline showing the relevant bits? -->
+![CPU & GPU Timeline (TBHGCal, `65536` rays, `use_TB_gun 0`, V100) ](img/nsys-overveiws/nvtx-timeline-with-cpu-tbhgcal-65536-gun-0.png){fig-alt="Annotated NSight Systems timeline for CPU & GPU testRaytracing for TBHGCal with 65536 rays and -use_TB_gun 0" width="100%" height="100%" }
 
+![CPU & GPU Timeline (TBHGCal, `16384` rays, `use_TB_gun 1`, V100)](img/nsys-overveiws/nvtx-timeline-with-cpu-tbhgcal-16384-gun-1.png){fig-alt="Annotated NSight Systems timeline for CPU & GPU testRaytracing for TBHGCal with 16348 rays and -use_TB_gun 1" width="100%" height="100%"}
+
+:::
+<!-- 
 ```bash
-testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0     \
-    -accept_zeros 1 -validate_results 1 -nrays 524228 -use_TB_gun 0       \
+testRaytracing -gdml_name TBHGCal.gdml -ongpu 1 -mmunit 0.1 -verbosity 0     \
+    -accept_zeros 1 -validate_results 1 -nrays 65536 -use_TB_gun 0       \
     -only_surf 0 -test_bvh 1 -bvh_single_step 1 -bvh_split_step 1 -oncpu 1
+
+testRaytracing -gdml_name TBHGCal.gdml -ongpu 1 -mmunit 0.1 -verbosity 0     \
+    -accept_zeros 1 -validate_results 1 -nrays 16384 -use_TB_gun 1       \
+    -only_surf 0 -test_bvh 1 -bvh_single_step 1 -bvh_split_step 1 -oncpu 1
+
 ```
+-->
 
 ## `testRaytracing` timeline (`nsys`) {.smalltitle}
 
-![](img/image.png){fig-alt="alt text" width="100%" height="100%"}
-
-@todo - 
-
-<!-- @todo simplified version -->
+![GPU-only timeline (TBHGCal, `524228` rays, `use_tb_gun 1`, V100)](img/nsys-overveiws/nvtx-timeline-gpu-only-tbhgcal-524228-tbgun-1.png){fig-alt="Annotated NSight Systems timeline for CPU & GPU testRaytracing for TBHGCal with 65536 rays and -use_TB_gun 0" width="100%" height="100%"}
 
 ```bash
-testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
-    -accept_zeros 1 -validate_results 0 -nrays 524228  -use_TB_gun 0       \
+testRaytracing -gdml_name TBHGCal.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
+    -accept_zeros 1 -validate_results 0 -nrays 524228  -use_TB_gun 1       \
     -only_surf 1 -test_bvh 1 -bvh_single_step 1 -bvh_split_step 1 -oncpu 0
 ```
 
@@ -120,10 +134,16 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 
 :::
 
+## Initial Benchmarking
 
-## Benchmarking
+<!-- @todo - move to backup? -->
+<!-- @todo - adjust labels? -->
 
-@todo - maybe old benchmark plot, showing CPU and GPU?
+![Initial `testRaytracing` benchmarking`](img/initial-testRaytracing-10M-gun-0.png){fig-alt="Initial testRaytracing benchmarking" width="100%" height="100%"}
+
+- 3 geometries
+- 10 million rays (unrealistic rays for TBGHCal)
+- CPU & GPU
 
 # Surface Model Kernels {.divider .teal}
 
@@ -146,13 +166,14 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
   - via `vgbrep::protonav::BVHSurfNavigator<Real_t>`
 - More efficient finding of ray-surface intersection
 
-
-## Nvidia Streaming Multiprocessor
+## Nvidia GPU Structure
 
 - NVIDIA GPUs are made up of many *Streaming Multiprocessors* (SMs)
   - GH100 die contains 144 SMs
 
-- @todo - full GPU diagram
+![Full GH100. Copyright © 2022 NVIDIA Corporation ([source](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/))](img/nvidia/Full-H100-GPU-with-144-SMs-1024x457.png)
+
+## Nvidia Streaming Multiprocessor
 
 - Each SM contains 
   - Compute units
@@ -161,6 +182,8 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
   - Limits on the maximum number of 
 
 - @todo - SM diagram
+
+![GH100 Streaming Multiprocessor. Copyright © 2022 NVIDIA Corporation ([source](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/))](img/nvidia/H100-Streaming-Multiprocessor-SM-625x869.png)
 
 - L2 Cache & Global memory are outside the SM
   - i.e. higher latency
@@ -229,7 +252,7 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 - If the kernel requires more than 255 registers per thread, registers will spill to *local memory*
 - *local memory* is a (terribly named) region of *global memory* (with L1 caching of stores) - i.e. it is outside of the SM so latency is bad. -->
 
-## `PropagateRaysSurfBVHSingle` {.smalltitle}
+## `PropagateRaysSurfBVHSingle`
 
 <!-- After occupancy was identified, severin implemented some altenative kernels to try and improve performance -->
 
@@ -243,7 +266,7 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 - @todo - Only able to get partial data so far
 - @todo - show register use,  runtime.
 
-## `ComputeNextStepAndNextSurfaces` + `RelocateToNextVolumes` {.smalltitle}
+## `ComputeNextStepAndNextSurfaces` + `RelocateToNextVolumes`
 
 - Splits  `PropagateRaysSurfBVHSingle` into `ComputeStepAndNextSurfaces` & `RelocateToNextVolumes`
 - @todo - timeline screenshot + comparison for the same geometry
@@ -255,7 +278,7 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 ## Limit registers per thread
 
 - Use `--ptxas-options=-v` to get register use and spill count at compile time
-  - Or it is reported by the profiler(s).
+  - Or it is reported by the profiler(s)
 - Globally via `--maxrregcount N`
 - Per kernel:
   - `__maxnreg__` for CUDA >= 12.4

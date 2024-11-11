@@ -159,6 +159,14 @@ $dark-bg-code-color: $tuos-powder-blue;
         }
     }
 
+    pre.slightly-bigger {
+        font-size: .7em;
+
+        code {
+            padding: 8px 16px;
+        }
+    }
+
     pre.smaller {
         font-size: 0.5em;
     }
@@ -234,6 +242,9 @@ $dark-bg-code-color: $tuos-powder-blue;
         color: $tuos-deep-violet;
         background: $tuos-powder-blue;
         padding: 0.1em 0.2em;
+        // Always small title size?
+        font-size: $presentation-h4-font-size;
+        margin-bottom: 0;
     }
     .slide h2 code {
         font-size: 90%;
@@ -306,6 +317,9 @@ $dark-bg-code-color: $tuos-powder-blue;
         figcaption { 
             text-align: center;
             margin-top: 0;
+            code {
+                font-size: 100%;
+            }
         }
     }
 
