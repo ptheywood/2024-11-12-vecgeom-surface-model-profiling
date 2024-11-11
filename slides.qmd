@@ -26,6 +26,14 @@ format:
     navigation-mode: linear
     controls: true
     mouse-wheel: true
+    include-after-body: 
+      - text: |
+          <script type="text/javascript">
+          Reveal.addEventListener('slidechanged', (event) => {
+            const isSnOn = (event.currentSlide.dataset.hideSlideNumber !== 'true');
+            Reveal.configure({ slideNumber: isSnOn ? "c" : isSnOn});
+          });
+          </script>
 
 # title slide background
 title-slide-attributes:
@@ -34,7 +42,7 @@ title-slide-attributes:
 
 ---
 
-# Intro/Context {.divider .teal}
+# VecGeom `surface_model` & `testRaytracing` {.divider .teal visibility="uncounted" data-hide-slide-number='true'}
 
 <!-- Only 20 mins. -->
 
@@ -54,12 +62,17 @@ title-slide-attributes:
 
 ::: {.smaller}
 
-- `test/surfaces/testRaytracing.{h/cpp/cu}`
 - Loads geometry, generates random rays, tests on CPU and GPU.
   - Solid and Surface representation
   - Validation
   - Without/with BVH
   - GPU Surface BVH with multiple kernel launches & split kernels
+
+:::
+
+::: {.smaller}
+
+- `test/surfaces/testRaytracing.{h/cpp/cu}`
 
 :::
 
@@ -78,15 +91,12 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0 \
     -oncpu 1
 ```
 
-## `testRaytracing` timeline (`nsys`) {.smalltitle}
-
-:::{fig-cap-location=top}
+## `testRaytracing` timeline CPU & GPU {.smalltitle}
 
 ![CPU & GPU Timeline (TBHGCal, `65536` rays, `use_TB_gun 0`, V100) ](img/nsys-overveiws/nvtx-timeline-with-cpu-tbhgcal-65536-gun-0.png){fig-alt="Annotated NSight Systems timeline for CPU & GPU testRaytracing for TBHGCal with 65536 rays and -use_TB_gun 0" width="100%" height="100%" }
 
 ![CPU & GPU Timeline (TBHGCal, `16384` rays, `use_TB_gun 1`, V100)](img/nsys-overveiws/nvtx-timeline-with-cpu-tbhgcal-16384-gun-1.png){fig-alt="Annotated NSight Systems timeline for CPU & GPU testRaytracing for TBHGCal with 16348 rays and -use_TB_gun 1" width="100%" height="100%"}
 
-:::
 <!-- 
 ```bash
 testRaytracing -gdml_name TBHGCal.gdml -ongpu 1 -mmunit 0.1 -verbosity 0     \
@@ -100,12 +110,12 @@ testRaytracing -gdml_name TBHGCal.gdml -ongpu 1 -mmunit 0.1 -verbosity 0     \
 ```
 -->
 
-## `testRaytracing` timeline (`nsys`) {.smalltitle}
+## `testRaytracing` timeline GPU surface-only {.smalltitle}
 
-![GPU-only timeline (TBHGCal, `524228` rays, `use_tb_gun 1`, V100)](img/nsys-overveiws/nvtx-timeline-gpu-only-tbhgcal-524228-tbgun-1.png){fig-alt="Annotated NSight Systems timeline for CPU & GPU testRaytracing for TBHGCal with 65536 rays and -use_TB_gun 0" width="100%" height="100%"}
+![GPU & surface only timeline (TBHGCal, `524228` rays, `use_tb_gun 1`, V100)](img/nsys-overveiws/nvtx-timeline-gpu-only-tbhgcal-524228-tbgun-1.png){fig-alt="Annotated NSight Systems timeline for CPU & GPU testRaytracing for TBHGCal with 524228 rays and -use_TB_gun 0" width="100%" height="100%"}
 
 ```bash
-testRaytracing -gdml_name TBHGCal.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
+testRaytracing -gdml_name TBHGCal.gdml -ongpu 1 -mmunit 0.1 -verbosity 0   \
     -accept_zeros 1 -validate_results 0 -nrays 524228  -use_TB_gun 1       \
     -only_surf 1 -test_bvh 1 -bvh_single_step 1 -bvh_split_step 1 -oncpu 0
 ```
@@ -139,13 +149,30 @@ testRaytracing -gdml_name TBHGCal.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 <!-- @todo - move to backup? -->
 <!-- @todo - adjust labels? -->
 
-![Initial `testRaytracing` benchmarking`](img/initial-testRaytracing-10M-gun-0.png){fig-alt="Initial testRaytracing benchmarking" width="100%" height="100%"}
+:::: {.columns}
+
+::: {.column .center .even-smaller style="padding-top: 120px; width: 15%"}
 
 - 3 geometries
-- 10 million rays (unrealistic rays for TBGHCal)
-- CPU & GPU
+- 10 million rays 
+  - not using TB gun
+  - TBHGCal unrealistic
+- 3 machines
+  - A100
+  - H100 pcie
+  - GH200
 
-# Surface Model Kernels {.divider .teal}
+:::
+
+::: {.column width="85%"}
+
+![Initial `testRaytracing` benchmarking with 10 Million Rays](img/benchmark-figures/vecgeom-surface-8ce55c5c-original-benchmark-10Mrays.png){fig-alt="Initial testRaytracing benchmarking" width="100%" height="100%"}
+
+:::
+
+::::
+
+# Surface modelling approaches {.divider .teal visibility="uncounted" data-hide-slide-number='true'}
 
 ## `PropagateRaysSurf`
 
@@ -171,54 +198,119 @@ testRaytracing -gdml_name TBHGCal.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 - NVIDIA GPUs are made up of many *Streaming Multiprocessors* (SMs)
   - GH100 die contains 144 SMs
 
-![Full GH100. Copyright © 2022 NVIDIA Corporation ([source](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/))](img/nvidia/Full-H100-GPU-with-144-SMs-1024x457.png)
+![Full GH100.<br /> © NVIDIA Corporation ([source](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/))](img/nvidia/Full-H100-GPU-with-144-SMs-1024x457.png)
 
-## Nvidia Streaming Multiprocessor
+## Nvidia Streaming Multiprocessor (SM)
+
+::::: {.columns}
+
+:::: {.column width=60%}
+
+::: {}
 
 - Each SM contains 
-  - Compute units
+  - Compute units (Int32, FP32, FP64)
   - Register file (64K 32-bit registers for Hopper) 
   - Instruction Cache, L1 Caches & Shared memory
-  - Limits on the maximum number of 
 
-- @todo - SM diagram
+:::
 
-![GH100 Streaming Multiprocessor. Copyright © 2022 NVIDIA Corporation ([source](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/))](img/nvidia/H100-Streaming-Multiprocessor-SM-625x869.png)
+::: {}
 
 - L2 Cache & Global memory are outside the SM
   - i.e. higher latency
 
-## Occupancy @todo split up & rename
+:::
+
+::::
+
+:::: {.column width=40%}
+
+![GH100 SM.<br /> © NVIDIA Corporation ([source](https://developer.nvidia.com/blog/nvidia-hopper-architecture-in-depth/))](img/nvidia/H100-Streaming-Multiprocessor-SM-625x869.png)
+
+::::
+
+:::::
+
+## Occupancy: CUDA background
+
+:::: {.smaller}
 
 <!-- @todo - thread block diagram from phd? -->
 
-- Threads are submit in a hierarchy, as a **grid** of **blocks** of **threads**
-- Blocks are issued to an SM, and they become **resident**
-  - Remain on the SM until they terminate
-  - Limit on number of resident threads due to hardware constraints
+::: {}
 
-- A **warp** is the group of `32` threads which execute instructions in lock-step 
-  - **Active threads** are participating in the current instruction within the warp
-  - **Disabled threads** are not participating
+- Function executed on the GPU by many threads is a **kernel**
+- Threads organised as a **grid** of (*clusters of*) **blocks** of **threads**
+
+:::
+
+::: {}
+
+- Blocks are issued to an SM, and they become **resident**
+  - Remain on the SM until all threads returns
+  - Limit on number of resident threads per SM due to hardware constraints
+    - `2048` threads per SM on most x100 GPUs
+
+:::
+
+::: {}
+
+- A **warp** is the group of `32` threads which execute in lock-step 
+  - **Active warps** are resident in an SM and have not executed their last instruction
   - **Eligible warps** are ready to issue their next instruction
-  - **Stalled warps** are not ready
+  - **Stalled warps** are not ready for their next instruction
+    - due to resources, latency, etc
+
+:::
+
+::::
+
+## Occupancy
+
+::: {.smaller}
 
 - **Occupancy** - Ratio of active warps on an SM to the maximum it could support
   - **Theoretical Occupancy** - Occupancy based on hardware and kernel constraints
   - **Achieved Occupancy** - the actual ratio at execution time
-    - lower than theoretical due to branching, stalls, workload imbalance
+    - `achieved <= theoretical` deu to stalls, workload imbalance, etc
 
-- Compiler selects the number of **registers per thread** at compile time
-  - Hardware maximum of `255` registers per thread in recent HPC GPUs 
+:::
+
+::: {.smaller}
+
+- Higher Occupancy does not guarantee higher performance
+  - **But** low occupancy reduces ability to hide latency
+  - **And** cannot use all resources if it is too low
+
+:::
+
+![](img/ncu/v100-ncu-occupancy-PropagateRaysSurf-gpu-only-tbhgcal-524228-tbgun-1.png){fig-alt="Nsight Compute Occupancy for PropagateRaysSurf kernel on V100" width=100%}
+
+![](img/ncu/v100-ncu-occupancy-PropagateRaysSurfBVH-gpu-only-tbhgcal-524228-tbgun-1.png){fig-alt="Nsight Compute Occupancy for PropagateRaysSurfBVH kernel on V100" width=100%}
+
+
+## Occupancy: registers per thread
+
+- Optimizer selects the number of **registers per thread** for a kernel at compile time
+  - Hardware maximum of `255` 32-bit registers per thread in recent HPC GPUs 
   - Can tell the compiler the upper limit for a given kernel, or all kernels
   - If there are not enough registers they **spill** to **Local Memory**
     - **Local Memory** is a special region of **Global Memory** - i.e. high latency
       - (and terribly named)
 
-## Occupancy is Low
+- Large complex kernels often use more registers
+  - But optimisers work in mysterious ways
+- FP64 uses more 32-bit registers than FP32...
 
-- @todo - ncu occupancy is low (12.5%)
-- @todo - ncu screenshots showing registers per thread / occupancy for one or both of the above kernels
+![](img/ncu/v100-ncu-occupancy-PropagateRaysSurf-gpu-only-tbhgcal-524228-tbgun-1.png){fig-alt="Nsight Compute Occupancy for PropagateRaysSurf kernel on V100" width=100%}
+
+![](img/ncu/v100-ncu-occupancy-PropagateRaysSurfBVH-gpu-only-tbhgcal-524228-tbgun-1.png){fig-alt="Nsight Compute Occupancy for PropagateRaysSurfBVH kernel on V100" width=100%}
+
+- @todo - spills measurement?
+
+## Stalls
+
 - @todo - ncu screenshots showing stall reasons, mostly L2 storeboard stalls
 
 - High register counts & spills
@@ -284,77 +376,14 @@ testRaytracing -gdml_name TBHGCal.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
   - `__maxnreg__` for CUDA >= 12.4
   - `__launch_bounds__` for older CUDAs, but less intuitive
 
-- I.e. `cmake .. -DCMAKE_CUDA_FLAGS="--maxrregcount 128 -Xptxas -v" ... `
+- I.e. `cmake .. -DCMAKE_CUDA_FLAGS="--maxrregcount 128 -Xptxas -v" ...`
 
 - Increases occupancy
 - Increases (forces) register spilling
 - Often hurts more than it helps
 
-- @todo -figures and dat if possible.
+- @todo - figures and data if possible.
 
-
-## Mixed Precision Mode
-
-::::: {layout="[[1], [-1], [1]]"}
-
-:::: {.columns}
-
-::: {.column .smaller width="60%"}
-
-<!-- + Reduce register pressure by using single precision in for some but not all real values -->
-- Single precision for some but not all `Real`
-- Reduces register pressure
-- More FP32 units
-- Less memory
-
-:::
-
-::: {.column width="40%"}
-
-```{.cpp .bigger style="margin-top: 0px; overflow: hidden;"}
-// testRaytracing.h
-using Real_t = float;
-```
-
-:::
-
-::::
-
-
-:::: {.columns}
-
-::: {.column .smaller width="60%"}
-
-- *"not stable on most geometries"*
-  - Assertions triggered by many geometries
-  - Launch failures
-  - `bvh_single_step` and `bvh_split_step` run indefinitely
-    - For some geometries, and on some GPUs?
-  - Unintentionally created a 1.3TB log file...
-
-:::
-
-::: {.column width="40%"}
-
-```{.console .bigger style="margin-top: 285px"}
-$ du -sh slurm-842405.out
-1.3T    slurm-842405.out
-```
-
-:::
-
-::::
-
-:::::
-
-## Impact of Mixed Precision
-
-- Less data to read, move and store
-- More FP32 units
-- Reduces Register pressure
-  - @todo - number.
-
-- @todo - change in runtime not significant for the base kernel
 
 ## Increased block size
 
@@ -392,8 +421,74 @@ $ du -sh slurm-842405.out
 - @todo - any changes
 - @todo - may be worth trying again with lower reg count?
 
+## Mixed precision mode
 
-# Benchmarking {.divider .teal}
+::::: {layout="[[1], [-1], [1]]"}
+
+:::: {.columns}
+
+::: {.column .smaller width="60%"}
+
+<!-- + Reduce register pressure by using single precision in for some but not all real values -->
+- Single precision for some but not all `Real`
+- Reduces register pressure
+- More FP32 units
+  - 2:1 on most X100/X200 cards
+  - 32:1 or 64:1 on most other NVIDIA GPUs
+- Less memory to move
+
+:::
+
+::: {.column width="40%"}
+
+```{.cpp .bigger style="margin-top: 0px; overflow: hidden;"}
+// testRaytracing.h
+using Real_t = float;
+```
+
+:::
+
+::::
+
+:::: {.columns}
+
+::: {.column .smaller width="60%"}
+
+- *"not stable on most geometries"*
+  - Assertions triggered by many geometries
+  - Launch failures
+  - `bvh_single_step` and `bvh_split_step` run indefinitely
+    - For some geometries, and on some GPUs?
+  - Unintentionally created a 1.3TB log file...
+
+:::
+
+::: {.column width="40%"}
+
+```{.console .bigger style="margin-top: 285px"}
+$ du -sh slurm-842405.out
+1.3T    slurm-842405.out
+```
+
+:::
+
+::::
+
+:::::
+
+## Impact of mixed precision
+
+- Less data to read, move and store
+- More FP32 units
+- Reduces Register pressure
+  - @todo - number.
+
+- @todo - change in runtime not significant for the base kernel
+
+
+<!-- 
+
+# Benchmarking {.divider .teal visibility="uncounted" data-hide-slide-number='true'} - @todo - include this as extra slides if figures generated?
 
 ## Per Model or Per kernel?
 
@@ -407,9 +502,9 @@ $ du -sh slurm-842405.out
 
 ## HGCal
 
-@todo
+@todo -->
 
-# Thank you {.divider .flamingo}
+# Thank you {.divider .flamingo visibility="uncounted" data-hide-slide-number='true'}
 
 # Additional Slides {.divider .coral visibility="uncounted" data-hide-slide-number='true'}
 
@@ -423,6 +518,30 @@ cmake -S . -B build \
       -DBACKEND=Scalar -DVECGEOM_USE_NAVTUPLE=ON \
       -DVECGEOM_BVH_SINGLE=ON -DVECGEOM_BUILTIN_VECCORE=ON
 ```
+
+## Surface model construction timeline
+
+::: {.smaller .no-caption-p-margin}
+
+![`trackML.gdml` ](img/nsys-overveiws/nvtx-timeline-gh200-trackML-500k.png){fig-alt="trackML.gdml" width="100%"}
+
+![`TBHGCal181Oct_fixdup.gdml`](img/nsys-overveiws/nvtx-timeline-gh200-tbhgcal-500k.png){fig-alt="TBHGCal181Oct_fixdup.gdml" width="100%"}
+
+![`LHCb_Upgrade_onlyECALandHCAL.gdml`](img/nsys-overveiws/nvtx-timeline-gh200-lhcb-500k.png){fig-alt="LHCb_Upgrade_onlyECALandHCAL.gdml" width="100%"}
+
+![`cms2026D110DD4hep_fix.gdml`](img/nsys-overveiws/nvtx-timeline-gh200-cms-500k.png){fig-alt="cms2026D110DD4hep_fix.gdml" width="100%"}
+
+:::
+
+::: {.smaller}
+
+- Larger/more complex geometries would benefit from solid -> surface conversion optimisation
+- GH200
+- `524228` rays
+- `FP64`
+
+:::
+
 
 <!-- ## Hardware 
 
