@@ -59,7 +59,6 @@ title-slide-attributes:
   - GPU Surface BVH with multiple kernel launches & split kernels
 
 
-
 - Profiling tweaks:
   - [NVTX](https://nvidia.github.io/NVTX/) ranges for profile annotation
   - `-oncpu 0` to disable cpu runs to to speed up profiling
@@ -86,6 +85,8 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0     \
 ## `testRaytracing` timeline (`nsys`) {.smalltitle}
 
 ![](img/image.png){fig-alt="alt text" width="100%" height="100%"}
+
+@todo - 
 
 <!-- @todo simplified version -->
 
@@ -124,16 +125,87 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 
 @todo - maybe old benchmark plot, showing CPU and GPU?
 
-# Profiling {.divider .teal}
+# Surface Model Kernels {.divider .teal}
 
-## `PropagateRaysSurf` & `PropagateRaysSurfBVH`
+## `PropagateRaysSurf`
 
-@todo - benchmark data for propagateRaysSurf/PropagateRaysSurfBVH
+@todo - timeline
 
-## Occupancy, Registers & Memory (stalls?)
+@todo - benchmark data for propagateRaysSurf
 
-@todo - ncu screenshot showing registers per thread / occupancy
+- Single kernel launch for the full batch of rays.
+- Grid-stride loop over each input ray
+  - Runs until the ray is outside
 
+## `PropagateRaysSurfBVH`
+
+@todo - timeline, compared to before
+@todo - benchmark data for propagateRaysSurfBVH, compared to before.
+
+- Same as `PropagateRaysSurf`, but using a *Bounding Volume Hierarchy* (BVH)
+  - via `vgbrep::protonav::BVHSurfNavigator<Real_t>`
+- More efficient finding of ray-surface intersection
+
+
+## Nvidia Streaming Multiprocessor
+
+- NVIDIA GPUs are made up of many *Streaming Multiprocessors* (SMs)
+  - GH100 die contains 144 SMs
+
+- @todo - full GPU diagram
+
+- Each SM contains 
+  - Compute units
+  - Register file (64K 32-bit registers for Hopper) 
+  - Instruction Cache, L1 Caches & Shared memory
+  - Limits on the maximum number of 
+
+- @todo - SM diagram
+
+- L2 Cache & Global memory are outside the SM
+  - i.e. higher latency
+
+## Occupancy @todo split up & rename
+
+<!-- @todo - thread block diagram from phd? -->
+
+- Threads are submit in a hierarchy, as a **grid** of **blocks** of **threads**
+- Blocks are issued to an SM, and they become **resident**
+  - Remain on the SM until they terminate
+  - Limit on number of resident threads due to hardware constraints
+
+- A **warp** is the group of `32` threads which execute instructions in lock-step 
+  - **Active threads** are participating in the current instruction within the warp
+  - **Disabled threads** are not participating
+  - **Eligible warps** are ready to issue their next instruction
+  - **Stalled warps** are not ready
+
+- **Occupancy** - Ratio of active warps on an SM to the maximum it could support
+  - **Theoretical Occupancy** - Occupancy based on hardware and kernel constraints
+  - **Achieved Occupancy** - the actual ratio at execution time
+    - lower than theoretical due to branching, stalls, workload imbalance
+
+- Compiler selects the number of **registers per thread** at compile time
+  - Hardware maximum of `255` registers per thread in recent HPC GPUs 
+  - Can tell the compiler the upper limit for a given kernel, or all kernels
+  - If there are not enough registers they **spill** to **Local Memory**
+    - **Local Memory** is a special region of **Global Memory** - i.e. high latency
+      - (and terribly named)
+
+## Occupancy is Low
+
+- @todo - ncu occupancy is low (12.5%)
+- @todo - ncu screenshots showing registers per thread / occupancy for one or both of the above kernels
+- @todo - ncu screenshots showing stall reasons, mostly L2 storeboard stalls
+
+- High register counts & spills
+- Not surprising for FP64 workloads
+
+- Increasing occupancy does not guarantee improved performance
+- But it can enable the *warp scheduler* to context switch to other threads within the block 
+  - **hiding latency** 
+
+<!-- 
 ## Streaming Multiprocessor, Residency, Occupancy, Registers file
 
 - Nvidia GPUs contain many (GH100 has `144`) Streaming Multiprocessors (SMs). 
@@ -153,29 +225,50 @@ testRaytracing -gdml_name file.gdml -ongpu 1 -mmunit 0.1 -verbosity 0      \
 - *eligable warps* are ready to isseu their next instruction (instruction has been fetched, execution unit(s) for instruction area ready, no unmet dependencies)
 - *stalled warps* are not ready.
 - Ideally want atleas as many eligable warps as schdulers per SM at any one point.
-- 2 warps per SM is not enough... 
-<!-- https://docs.nvidia.com/gameworks/content/developertools/desktop/analysis/report/cudaexperiments/kernellevel/issueefficiency.htm -->
+- 2 warps per SM is not enough...  [source](https://docs.nvidia.com/gameworks/content/developertools/desktop/analysis/report/cudaexperiments/kernellevel/issueefficiency.htm)
 - If the kernel requires more than 255 registers per thread, registers will spill to *local memory*
-- *local memory* is a (terribly named) region of *global memory* (with L1 caching of stores) - i.e. it is outside of the SM so latency is bad.
+- *local memory* is a (terribly named) region of *global memory* (with L1 caching of stores) - i.e. it is outside of the SM so latency is bad. -->
 
-## `PropagateRaysSurfBVHSingle` 
+## `PropagateRaysSurfBVHSingle` {.smalltitle}
+
+<!-- After occupancy was identified, severin implemented some altenative kernels to try and improve performance -->
 
 - Split the single kernel launch into a loop of 2 kernels:
   - `PropagateRaysSurfBVHSingle` - traverse a single step
   - `filterAliveRays` - compact the alive/inside rays for the next iteration
-- Reduces register pressure
+- Reduces register pressure ?@todo
 
 - @todo - timeline screen shot
 - @todo - compare for a single model? 
 - @todo - Only able to get partial data so far
 - @todo - show register use,  runtime.
 
-## `ComputeNextStepAndNextSurfaces` + `RelocateToNextVolumes` 
+## `ComputeNextStepAndNextSurfaces` + `RelocateToNextVolumes` {.smalltitle}
 
 - Splits  `PropagateRaysSurfBVHSingle` into `ComputeStepAndNextSurfaces` & `RelocateToNextVolumes`
 - @todo - timeline screenshot + comparison for the same geometry
 - @todo - show register usage + total time.
 - @todo - benchmark plot? 
+- @todo - Only able to get partial data so far
+
+
+## Limit registers per thread
+
+- Use `--ptxas-options=-v` to get register use and spill count at compile time
+  - Or it is reported by the profiler(s).
+- Globally via `--maxrregcount N`
+- Per kernel:
+  - `__maxnreg__` for CUDA >= 12.4
+  - `__launch_bounds__` for older CUDAs, but less intuitive
+
+- I.e. `cmake .. -DCMAKE_CUDA_FLAGS="--maxrregcount 128 -Xptxas -v" ... `
+
+- Increases occupancy
+- Increases (forces) register spilling
+- Often hurts more than it helps
+
+- @todo -figures and dat if possible.
+
 
 ## Mixed Precision Mode
 
@@ -240,11 +333,48 @@ $ du -sh slurm-842405.out
 
 - @todo - change in runtime not significant for the base kernel
 
+## Increased block size
+
+- `testRaytracing.cu` uses a fixed number of threads per block of `32`
+  - Larger values would allow more latency hiding within a block
+    - But SMs can contain threads from separate blocks, so it might not make a difference.
+
+```{.cpp}
+// testRaytracing.cu
+  constexpr int initThreads = 32;
+  int initBlocks            = (nrays + initThreads - 1) / initThreads;
+```
+
+- Alternatively, could use a per-kernel occupancy API method to maximise occupancy
+  - i.e. `cudaOccupancyMaxPotentialBlockSize`
+  - Specialises for the target GPU architecture.
+  - Note: if kernel is overloaded, must specify the correct function ptr
+
+```{.cpp}
+  int minGridSize = 0;
+  int blockSize = 0;
+  int gridSize = 0;
+  // ...
+  cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, PropagateRaysSurf);
+  gridSize = (nrays + blockSize - 1) / blockSize;
+  PropagateRaysSurf<<<gridSize, blockSize>>>(nrays, ...);
+```
+
+
+## Increased block size
+
+- @todo - results from changing block size. 
+- @todo - V100 only, impact may vary on diff GPUs
+- @todo - selected block size for each kernel via occupancy API for FP64 and fp32
+- @todo - any changes
+- @todo - may be worth trying again with lower reg count?
+
+
 # Benchmarking {.divider .teal}
 
 ## Per Model or Per kernel?
 
-@todo decide
+- @todo decide. Maybe only show a little bit of data / include gaps?
 
 ## TrackML
 
@@ -271,7 +401,7 @@ cmake -S . -B build \
       -DVECGEOM_BVH_SINGLE=ON -DVECGEOM_BUILTIN_VECCORE=ON
 ```
 
-## Hardware 
+<!-- ## Hardware 
 
 ::: {.center layout="[[-1], [1], [-1]]"}
 
@@ -284,10 +414,10 @@ cmake -S . -B build \
 
 : {.striped .table-full-width}
 
-:::
+::: -->
 
 
-## Geometries
+<!-- ## Geometries
 
 ::: {.center layout="[[-1], [1], [-1]]"}
 
@@ -300,56 +430,12 @@ cmake -S . -B build \
 
 : {.striped .table-full-width}
 
-:::
-
-## Limit registers per thread
-
-- Use `--ptxas-options=-v` to get register use and spill count at compile time
-  - Or it is reported by the profiler(s).
-- Globally via `--maxrregcount N`
-- Per kernel:
-  - `__maxnreg__` for CUDA >= 12.4
-  - `__launch_bounds__` for older CUDAs, but less intuitive
-
-- I.e. `cmake .. -DCMAKE_CUDA_FLAGS="--maxrregcount 128 -Xptxas -v" ... `
-
-- Increases occupancy
-- Increases (forces) register spilling
-- Often hurts more than it helps
-
-- @todo -figures and dat if possible.
+::: -->
 
 
-## Increase block size. 
+<!-- ## Long Tail
 
-* In `testRaytracing.cu`, this is a constexpr int for all kernels, which can be modified.
-
-```{.cpp}
-// testRaytracing.cu
-  constexpr int initThreads = 32;
-  int initBlocks            = (nrays + initThreads - 1) / initThreads;
-```
-
-* Alternatively, could use a per-kernel occupancy API method to maximise occupancy, i.e. `cudaOccupancyMaxPotentialBlockSize`
-  * Specialises for the target GPU architecture.
-  * Note: if kernel is overloaded, must specify the correct function ptr
-
-```{.cpp}
-  int minGridSize = 0;
-  int blockSize = 0;
-  int gridSize = 0;
-  // ...
-  cudaOccupancyMaxPotentialBlockSize(&minGridSize, &blockSize, PropagateRaysSurfBVH);
-  gridSize = (nrays + blockSize - 1) / blockSize;
-  PropagateRaysSurfBVH<<<gridSize, blockSize>>>(nrays, ...);
-```
-
-
-
-
-## Long Tail
-
-- Slide showing the long tail?
+- @todo Slide showing the long tail? -->
 
 
 
