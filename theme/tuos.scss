@@ -376,6 +376,10 @@ $dark-bg-code-color: $tuos-powder-blue;
         color: $tuos-coral;
     }
 
+    .list-style-none ul {
+        list-style: none;
+    }
+
     // This would need to be done with diff colours for diff places (headers, title slide et
     // code {
     //     background-color: $tuos-powder-blue-20;
