@@ -151,6 +151,14 @@ $dark-bg-code-color: $tuos-powder-blue;
         }
     }
 
+    .somewhat-smaller {
+        font-size: 75%;
+        code {
+            font-size: 75%
+        }
+    }
+
+
     .even-smaller {
         font-size: 70%;
         code {
